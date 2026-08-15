@@ -72,7 +72,7 @@ describe(checkNeedsRebuildAsync, () => {
     ).resolves.toBe('current-hash');
   });
 
-  it(`exits 1 when the installed hash differs`, async () => {
+  it(`exits 2 when the installed hash differs`, async () => {
     mockInstalled('old-hash', 'ios');
     const result = await checkNeedsRebuildAsync(projectRoot, ['ios'], {
       explicit: true,
@@ -81,12 +81,12 @@ describe(checkNeedsRebuildAsync, () => {
       status: 'rebuild-required',
       reason: 'hash-mismatch',
       commands: ['npx expo run:ios'],
-      exitCode: 1,
+      exitCode: 2,
     });
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
   });
 
-  it(`exits 2 when the prebuild marker is stale, without waiting for a device`, async () => {
+  it(`exits 3 when the prebuild marker is stale, without waiting for a device`, async () => {
     jest.mocked(getNativeDirectoryStaleness).mockReturnValue({
       status: 'stale',
       changes: [
@@ -104,7 +104,7 @@ describe(checkNeedsRebuildAsync, () => {
       reason: 'prebuild-stale',
       commands: ['npx expo prebuild -p ios', 'npx expo run:ios'],
       prebuildStatus: 'stale',
-      exitCode: 2,
+      exitCode: 3,
     });
     // The verdict names what changed, so the developer (or agent) can act without guessing.
     expect(result.platforms.ios!.recommendation).toContain('app config, plugins/withFoo.js');
@@ -112,10 +112,10 @@ describe(checkNeedsRebuildAsync, () => {
       { source: 'app config', change: 'changed' },
       { source: 'plugins/withFoo.js', change: 'added' },
     ]);
-    expect(result.exitCode).toBe(2);
+    expect(result.exitCode).toBe(3);
   });
 
-  it(`exits 3 when @expo/fingerprint is unavailable`, async () => {
+  it(`exits 4 when @expo/fingerprint is unavailable`, async () => {
     jest.mocked(importFingerprint).mockReturnValue(null);
     const result = await checkNeedsRebuildAsync(projectRoot, ['ios'], {
       explicit: true,
@@ -123,12 +123,12 @@ describe(checkNeedsRebuildAsync, () => {
     expect(result.platforms.ios).toMatchObject({
       status: 'unknown',
       reason: 'fingerprint-unavailable',
-      exitCode: 3,
+      exitCode: 4,
     });
-    expect(result.exitCode).toBe(3);
+    expect(result.exitCode).toBe(4);
   });
 
-  it(`exits 3 when the app is not installed`, async () => {
+  it(`exits 4 when the app is not installed`, async () => {
     jest.mocked(getInstalledFingerprintIosAsync).mockResolvedValue({
       status: 'app-not-installed',
       appId: 'dev.expo.app',
@@ -141,11 +141,11 @@ describe(checkNeedsRebuildAsync, () => {
       status: 'unknown',
       reason: 'app-not-installed',
       commands: ['npx expo run:ios'],
-      exitCode: 3,
+      exitCode: 4,
     });
   });
 
-  it(`exits 3 when the device check fails unexpectedly`, async () => {
+  it(`exits 4 when the device check fails unexpectedly`, async () => {
     jest
       .mocked(getInstalledFingerprintIosAsync)
       .mockRejectedValue(new Error('adb: device offline'));
@@ -155,10 +155,10 @@ describe(checkNeedsRebuildAsync, () => {
     expect(result.platforms.ios).toMatchObject({
       status: 'unknown',
       reason: 'check-failed',
-      exitCode: 3,
+      exitCode: 4,
     });
     expect(result.platforms.ios?.recommendation).toContain('adb: device offline');
-    expect(result.exitCode).toBe(3);
+    expect(result.exitCode).toBe(4);
   });
 
   it(`does not leak an unhandled rejection when the fingerprint fails on a no-device path`, async () => {
@@ -178,7 +178,7 @@ describe(checkNeedsRebuildAsync, () => {
       jest.mocked(getInstalledFingerprintIosAsync).mockResolvedValue({ status: 'no-device' });
 
       const result = await checkNeedsRebuildAsync(projectRoot, ['ios'], { explicit: true });
-      expect(result.platforms.ios).toMatchObject({ reason: 'check-failed', exitCode: 3 });
+      expect(result.platforms.ios).toMatchObject({ reason: 'check-failed', exitCode: 4 });
 
       // Let any pending rejection reach the process listener before asserting.
       await new Promise(setImmediate);
@@ -188,7 +188,7 @@ describe(checkNeedsRebuildAsync, () => {
     }
   });
 
-  it(`exits 3 when the installed app has no embedded fingerprint`, async () => {
+  it(`exits 4 when the installed app has no embedded fingerprint`, async () => {
     jest.mocked(getInstalledFingerprintIosAsync).mockResolvedValue({
       status: 'no-embedded-fingerprint',
       appId: 'dev.expo.app',
@@ -200,7 +200,7 @@ describe(checkNeedsRebuildAsync, () => {
     expect(result.platforms.ios).toMatchObject({
       status: 'unknown',
       reason: 'no-embedded-fingerprint',
-      exitCode: 3,
+      exitCode: 4,
     });
   });
 
@@ -212,9 +212,9 @@ describe(checkNeedsRebuildAsync, () => {
     });
     expect(result.platforms.android).toMatchObject({
       reason: 'no-device',
-      exitCode: 3,
+      exitCode: 4,
     });
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
   });
 
   it(`counts unreachable platforms when requested explicitly`, async () => {
@@ -222,16 +222,16 @@ describe(checkNeedsRebuildAsync, () => {
     const result = await checkNeedsRebuildAsync(projectRoot, ['android', 'ios'], {
       explicit: true,
     });
-    expect(result.exitCode).toBe(3);
+    expect(result.exitCode).toBe(4);
   });
 
-  it(`exits 3 when no platform is reachable`, async () => {
+  it(`exits 4 when no platform is reachable`, async () => {
     mockInstalled(null, 'ios');
     mockInstalled(null, 'android');
     const result = await checkNeedsRebuildAsync(projectRoot, ['android', 'ios'], {
       explicit: false,
     });
-    expect(result.exitCode).toBe(3);
+    expect(result.exitCode).toBe(4);
   });
 
   it(`reports each platform as it completes`, async () => {
@@ -256,9 +256,9 @@ describe(checkNeedsRebuildAsync, () => {
     const result = await checkNeedsRebuildAsync(projectRoot, ['android', 'ios'], {
       explicit: true,
     });
-    expect(result.platforms.android?.exitCode).toBe(1);
-    expect(result.platforms.ios?.exitCode).toBe(2);
-    expect(result.exitCode).toBe(2);
+    expect(result.platforms.android?.exitCode).toBe(2);
+    expect(result.platforms.ios?.exitCode).toBe(3);
+    expect(result.exitCode).toBe(3);
   });
 });
 

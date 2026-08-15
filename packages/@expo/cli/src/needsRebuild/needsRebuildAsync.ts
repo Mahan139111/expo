@@ -82,7 +82,7 @@ export type PlatformCheckResult = {
   prebuildStatus: 'fresh' | 'stale' | 'unknown' | 'not-applicable';
   /** Sources that made the native directories stale. Empty unless `prebuildStatus` is `stale`. */
   prebuildChanges: PrebuildSourceChange[];
-  exitCode: 0 | 1 | 2 | 3;
+  exitCode: 0 | 2 | 3 | 4;
 };
 
 export type NeedsRebuildResult = {
@@ -144,7 +144,7 @@ export async function checkNeedsRebuildAsync(
       checkPlatformAsync(projectRoot, platform, resolved, { device, appId })
         .catch((error) => {
           // The exit code is this command's API: environmental failures (adb, simctl, config
-          // evaluation) must report "cannot determine" (3), not be mistaken for "rebuild" (1).
+          // evaluation) must report "cannot determine" (4), not be mistaken for "rebuild" (2).
           // Debug events never reach stdout, keeping `--json` output parseable.
           debugEvent('platform_check_failed', {
             platform,
@@ -187,10 +187,15 @@ async function checkPlatformAsync(
       currentHash: null,
       prebuildStatus: 'unknown',
       prebuildChanges: [],
-      exitCode: 3,
+      exitCode: 4,
     };
   }
 
+  // TODO: this local computation costs ~3s CPU-bound wall time (more on a cold page cache) in
+  // large monorepos. A running dev server already computes and caches the same fingerprint
+  // (GET /_expo/fingerprint, see start/server/metro/fingerprintService.ts) — query it first and
+  // fall back to a local computation only when no dev server is reachable. Would also guarantee
+  // the CLI and the server agree on the hash.
   const fingerprintPromise = resolved.Fingerprint.createFingerprintAsync(
     projectRoot,
     nativeFingerprintOptions(platform)
@@ -231,7 +236,7 @@ async function checkPlatformAsync(
       currentHash: fingerprint.hash,
       prebuildStatus,
       prebuildChanges,
-      exitCode: 2,
+      exitCode: 3,
     };
   }
 
@@ -257,7 +262,7 @@ async function checkPlatformAsync(
         commands: [],
         device: null,
         installedHash: null,
-        exitCode: 3,
+        exitCode: 4,
       };
     case 'app-not-installed':
       return {
@@ -268,7 +273,7 @@ async function checkPlatformAsync(
         commands: rebuildCommands(platform, { prebuildFirst: false }),
         device: installed.device,
         installedHash: null,
-        exitCode: 3,
+        exitCode: 4,
       };
     case 'no-embedded-fingerprint':
       return {
@@ -280,7 +285,7 @@ async function checkPlatformAsync(
         commands: rebuildCommands(platform, { prebuildFirst: false }),
         device: installed.device,
         installedHash: null,
-        exitCode: 3,
+        exitCode: 4,
       };
     case 'ok': {
       if (installed.hash === fingerprint.hash) {
@@ -303,7 +308,7 @@ async function checkPlatformAsync(
         commands: rebuildCommands(platform, { prebuildFirst: false }),
         device: installed.device,
         installedHash: installed.hash,
-        exitCode: 1,
+        exitCode: 2,
       };
     }
   }
@@ -320,7 +325,7 @@ function toCheckFailedResult(error: Error): PlatformCheckResult {
     currentHash: null,
     prebuildStatus: 'unknown',
     prebuildChanges: [],
-    exitCode: 3,
+    exitCode: 4,
   };
 }
 
@@ -334,7 +339,9 @@ function describeChanges(changes: PrebuildSourceChange[]): string {
 
 /**
  * The command's exit code is the worst per-platform code. Definitive answers outrank
- * indeterminate ones: 2 (prebuild + rebuild) > 1 (rebuild) > 3 (cannot determine) > 0.
+ * indeterminate ones: 3 (prebuild + rebuild) > 2 (rebuild) > 4 (cannot determine) > 0.
+ * Exit code 1 is reserved for bad input (unreachable from here — usage errors are caught
+ * before a platform check ever runs) so it never collides with a check result.
  * Without an explicit `--platform`, platforms with no reachable device don't count
  * as long as another platform produced a definitive answer.
  */
@@ -349,7 +356,7 @@ function aggregateExitCode(
       considered = reachable;
     }
   }
-  for (const code of [2, 1, 3] as const) {
+  for (const code of [3, 2, 4] as const) {
     if (considered.some((result) => result.exitCode === code)) {
       return code;
     }

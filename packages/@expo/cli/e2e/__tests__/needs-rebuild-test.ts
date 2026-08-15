@@ -42,31 +42,32 @@ it('runs `npx expo needs-rebuild --help`', async () => {
 
       Exit codes
         0  up to date — a JS reload is enough
-        1  rebuild required — run npx expo run:<platform>
-        2  prebuild required — run npx expo prebuild, then rebuild
-        3  cannot determine — no device, app not installed, no embedded fingerprint, or an error
+        1  invalid usage — a mistyped flag or unsupported --platform/--app-id combination
+        2  rebuild required — run npx expo run:<platform>
+        3  prebuild required — run npx expo prebuild, then rebuild
+        4  cannot determine — no device, app not installed, no embedded fingerprint, or an error
     "
   `);
 });
 
-it('exits with code 3 on an invalid platform', async () => {
+it('exits with code 1 on an invalid platform', async () => {
   const error: any = await executeExpoAsync(projectRoot, ['needs-rebuild', '--platform', 'web'], {
     verbose: false,
   }).catch((error) => error);
   expect(error).toBeInstanceOf(Error);
   expect(error.message).toMatch(/Unsupported platform: web/);
-  // The exit code is the command's public API: 1 means "rebuild required", so usage
-  // errors must surface as 3 (cannot determine), never as 1.
-  expect(error.exitCode).toBe(3);
+  // Exit code 1 is reserved for bad input — an unsupported --platform value is a usage
+  // error, the same category as a mistyped flag, so it gets the same code.
+  expect(error.exitCode).toBe(1);
 });
 
-it('exits with code 3 on a mistyped flag', async () => {
+it('exits with code 1 on a mistyped flag', async () => {
   const error: any = await executeExpoAsync(projectRoot, ['needs-rebuild', '--platfrom', 'ios'], {
     verbose: false,
   }).catch((error) => error);
   expect(error).toBeInstanceOf(Error);
   expect(error.message).toMatch(/unknown or unexpected option/i);
-  // Argument parsing errors go through a different path than command errors; both must
-  // report 3, never the rebuild-required code 1.
-  expect(error.exitCode).toBe(3);
+  // Argument parsing errors go through the same shared `assertArgs` every command uses,
+  // which exits 1 — exclusively reserved for bad input, never a check result.
+  expect(error.exitCode).toBe(1);
 });
