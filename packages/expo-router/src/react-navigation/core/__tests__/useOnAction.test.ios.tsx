@@ -67,7 +67,7 @@ test("lets parent handle the action if child didn't", () => {
 
   let dispatch: (action: { type: 'REVERSE' }) => void;
   const TestScreen = (props: any) => {
-    dispatch = props.navigation.dispatch;
+    dispatch = props.navigation.dispatchSync;
     return null;
   };
 
@@ -147,7 +147,7 @@ test('handles an unsupported targeted action as a no-op without bubbling', () =>
 
   const state = ref.current!.getRootState();
 
-  act(() => ref.dispatch({ type: 'POP_TO_TOP', target: state.key }));
+  act(() => ref.dispatchSync({ type: 'POP_TO_TOP', target: state.key }));
 
   expect(ref.current!.getRootState()).toBe(state);
   expect(onUnhandledAction).not.toHaveBeenCalled();
@@ -255,7 +255,7 @@ test("lets children handle the action if parent didn't with navigationInChildEna
 
   render(element).update(element);
 
-  expect(onStateChange).toHaveBeenCalledTimes(1);
+  expect(onStateChange).toHaveBeenCalledTimes(2);
   expect(onStateChange).toHaveBeenLastCalledWith({
     stale: false,
     type: 'test',
@@ -553,7 +553,7 @@ test('action goes to correct child navigator if target is specified', () => {
   render(element).update(element);
 
   act(() => {
-    ref.dispatch({ type: 'REVERSE', target: '1' });
+    ref.dispatchSync({ type: 'REVERSE', target: '1' });
   });
 
   expect(onStateChange).toHaveBeenCalledTimes(1);
@@ -765,7 +765,7 @@ test("prevents removing a screen with 'removePrevented' event", () => {
     });
     React.useEffect(() => {
       if (!preventRemove && blockedAction) {
-        ref.current?.dispatch(blockedAction);
+        ref.current?.dispatchSync(blockedAction);
       }
     }, [blockedAction, preventRemove]);
 
@@ -826,7 +826,7 @@ test("prevents removing a screen with 'removePrevented' event", () => {
     type: 'stack',
   });
 
-  act(() => ref.current?.dispatch(StackActions.popTo('foo')));
+  act(() => ref.current?.dispatchSync(StackActions.popTo('foo')));
 
   expect(onStateChange).toHaveBeenCalledTimes(2);
   expect(onBeforeRemove).toHaveBeenCalledTimes(1);
@@ -886,7 +886,7 @@ test("prevents removing a child screen with 'removePrevented' event", () => {
     });
     React.useEffect(() => {
       if (!preventRemove && blockedAction) {
-        ref.current?.dispatch(blockedAction);
+        ref.current?.dispatchSync(blockedAction);
       }
     }, [blockedAction, preventRemove]);
 
@@ -961,7 +961,7 @@ test("prevents removing a child screen with 'removePrevented' event", () => {
     type: 'stack',
   });
 
-  act(() => ref.current?.dispatch(StackActions.popTo('foo')));
+  act(() => ref.current?.dispatchSync(StackActions.popTo('foo')));
 
   expect(onStateChange).toHaveBeenCalledTimes(2);
   expect(onBeforeRemove).toHaveBeenCalledTimes(1);
@@ -1031,7 +1031,7 @@ test("prevents removing a grand child screen with 'removePrevented' event", () =
     });
     React.useEffect(() => {
       if (!preventRemove && blockedAction) {
-        ref.current?.dispatch(blockedAction);
+        ref.current?.dispatchSync(blockedAction);
       }
     }, [blockedAction, preventRemove]);
 
@@ -1123,7 +1123,7 @@ test("prevents removing a grand child screen with 'removePrevented' event", () =
     type: 'stack',
   });
 
-  act(() => ref.current?.dispatch(StackActions.popTo('foo')));
+  act(() => ref.current?.dispatchSync(StackActions.popTo('foo')));
 
   expect(onStateChange).toHaveBeenCalledTimes(2);
   expect(onBeforeRemove).toHaveBeenCalledTimes(1);
@@ -1210,7 +1210,7 @@ test("prevents removing by multiple screens with 'removePrevented' event", () =>
     });
     React.useEffect(() => {
       if (!preventRemove && blockedAction) {
-        ref.current?.dispatch(blockedAction);
+        ref.current?.dispatchSync(blockedAction);
       }
     }, [blockedAction, preventRemove]);
 
@@ -1257,7 +1257,7 @@ test("prevents removing by multiple screens with 'removePrevented' event", () =>
   expect(onStateChange).toHaveBeenCalledTimes(1);
   expect(onStateChange).toHaveBeenCalledWith(preventedState);
 
-  act(() => ref.current?.dispatch(StackActions.popTo('foo')));
+  act(() => ref.current?.dispatchSync(StackActions.popTo('foo')));
 
   expect(onStateChange).toHaveBeenCalledTimes(1);
   expect(onBeforeRemove.lex).toHaveBeenCalledTimes(1);

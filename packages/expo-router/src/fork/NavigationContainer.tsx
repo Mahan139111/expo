@@ -3,7 +3,7 @@ import { I18nManager } from 'react-native';
 
 import { seedStoreState } from '../global-state/store';
 import { useExpoRouterStore } from '../global-state/storeContext';
-import { useImperativeApiEmitter } from '../imperative-api';
+import { ImperativeApiEmitter } from '../imperative-api';
 import type {
   DocumentTitleOptions,
   LinkingOptions,
@@ -86,7 +86,6 @@ function NavigationContainerInner(
 
   useBackButton(refContainer);
   useDocumentTitle(refContainer, documentTitle);
-  useImperativeApiEmitter(refContainer);
 
   const [lastUnhandledLink, setLastUnhandledLink] = React.useState<string | undefined>();
 
@@ -180,6 +179,7 @@ function NavigationContainerInner(
     <LocaleDirContext.Provider value={direction}>
       <UnhandledLinkingContext.Provider value={unhandledLinkingContext}>
         <LinkingContext.Provider value={linkingContext}>
+          <ImperativeApiEmitter navigationRef={refContainer} />
           <BaseNavigationContainer
             {...rest}
             theme={theme}
